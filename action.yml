@@ -1,0 +1,53 @@
+name: 'Setup Poly'
+description: 'Install and configure poly, the universal polyglot package and dependency orchestrator'
+author: 'RitualDev Lab'
+branding:
+  icon: 'package'
+  color: 'blue'
+
+inputs:
+  version:
+    description: 'Version of @ritualdev-lab/poly to install (default: latest)'
+    required: false
+    default: 'latest'
+  cache:
+    description: 'Automatically cache and restore polyglot dependencies using poly.lock'
+    required: false
+    default: 'true'
+  cache-dependency-path:
+    description: 'Path to composite lockfile'
+    required: false
+    default: 'poly.lock'
+
+outputs:
+  poly-version:
+    description: 'Installed poly CLI version'
+    value: ${{ steps.install-poly.outputs.version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install poly CLI
+      id: install-poly
+      shell: bash
+      run: |
+        if [ "${{ inputs.version }}" = "latest" ]; then
+          npm install -g @ritualdev-lab/poly@latest
+        else
+          npm install -g @ritualdev-lab/poly@${{ inputs.version }}
+        fi
+        
+        VERSION=$(poly --version)
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "⚡ Initialized $VERSION"
+
+    - name: Restore dependency cache
+      if: inputs.cache == 'true'
+      shell: bash
+      run: |
+        if [ -f "${{ inputs.cache-dependency-path }}" ]; then
+          echo "Restoring dependencies via poly cache..."
+          poly cache restore || true
+        else
+          echo "No ${{ inputs.cache-dependency-path }} found. Skipping cache restore."
+        fi
